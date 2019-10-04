@@ -4,6 +4,11 @@ Learning about the different uses of [RANSAC](https://en.wikipedia.org/wiki/Rand
 
 RANSAC is an iterative method for estimating the parameters of a mathematical model from a set of observed data that contains outliers, when the outliers need to be ignored. It is non-deterministic; the more you let it run, the more reasonable the result.
 
+# Todos
+
+- [ ] pointcloud registration example
+- [ ] create a modular RANSAC function
+
 ## 2D Regression
 
 As a toy example, we'll be corrupting a linear function of `x` with random outliers. Then we'll plot the predicted line from RANSAC and linear regression.
