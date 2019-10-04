@@ -82,4 +82,5 @@ if __name__ == "__main__":
     plt.scatter(x[best_inliers], y[best_inliers], c='b', label="inliers")
     plt.scatter(x[~best_inliers], y[~best_inliers], c='r', label="outliers")
     plt.legend(loc='upper left')
+    plt.savefig("./plots/toy.png", format="png", dpi=200)
     plt.show()
