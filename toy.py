@@ -11,16 +11,13 @@ if __name__ == "__main__":
     
     # create linear function
     x = np.linspace(0, 30, num=num_points)
-    noise = 5 * np.random.randn(len(x)) + 3  # additive noise
+    noise = 0.7 * np.random.randn(len(x))
     y = 2*x - 3 + noise
 
     # create outliers
     frac = int(0.2 * num_points)
     idxs = np.random.choice(np.arange(num_points), size=frac, replace=False)
-    y[idxs] += np.random.randint(-20, 10, frac)
-
-    plt.scatter(x, y)
-    plt.show()
+    y[idxs] += np.random.randint(-40, 20, frac)
 
     # fit regular linear regression
     x_lin = x.copy().reshape(-1, 1)
@@ -31,7 +28,7 @@ if __name__ == "__main__":
     s = 2  # the smallest number of points required to estimate model params
     e = 0.25  # probability that a point is an outlier
     N = 100 # the number of iterations 
-    d = 3  # the threshold used to identify a point that fits well
+    d = 1  # the threshold used to identify a point that fits well
     T = 5  # the number of nearby points required to assert model fits well
 
     scores = {}
@@ -52,8 +49,6 @@ if __name__ == "__main__":
         # determine points within threshold
         # we need to loop through all other points
         # and compute their distance to the estimated line
-        # other_pts_x = x[other_idxs]
-        # other_pts_y = y[other_idxs]
         num = np.abs((pts_y[1, 0]-pts_y[0, 0])*x - (pts_x[1, 0]-pts_x[0, 0])*y + pts_x[1, 0]*pts_y[0, 0] - pts_y[1, 0]*pts_x[0, 0])
         denum = np.sqrt((pts_y[1, 0]-pts_y[0, 0])**2 + (pts_x[1, 0]-pts_x[0, 0])**2)
         distances = num / denum
@@ -82,8 +77,8 @@ if __name__ == "__main__":
     plot_y = plot_x @ best_params
     plt.plot(plot_x[:, 0], plot_y[:, 0], label="ransac")
     plot_y_lin = plot_x @ linreg_params
-    # plt.plot(plot_x[:, 0], plot_y_lin[:, 0], label="linreg")
-    plt.plot(plot_x[:, 0], plot_x[:, 0]*2 -3, label="ground truth")
+    plt.plot(plot_x[:, 0], plot_y_lin[:, 0], label="linreg")
+    # plt.plot(plot_x[:, 0], plot_x[:, 0]*2 -3, label="ground truth")
     plt.scatter(x[best_inliers], y[best_inliers], c='b', label="inliers")
     plt.scatter(x[~best_inliers], y[~best_inliers], c='r', label="outliers")
     plt.legend(loc='upper left')
