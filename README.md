@@ -17,8 +17,12 @@ As a toy example, we'll be corrupting a linear function of `x` with random outli
 <img src="./plots/toy.png" alt="Drawing">
 </p>
 
+## Registration
+
+ICP is a local registration method that relies on a good initial estimate of the rigid transform. If we don't have such an initial guess, we can use a global registration method like feature-based + RANSAC and use its output as an initial guess that ICP can further refine.
+
 ## References
 
-- Kris Kitani's slides for 16-385: http://www.cs.cmu.edu/~16385/s17/Slides/10.3_2D_Alignment__RANSAC.pdf
-- RANSAC for Dummies by Marco Zuliani: http://www.cs.tau.ac.il/~turkel/imagepapers/RANSAC4Dummies.pdf
-- Robert Collins' slides for CSE486: http://www.cse.psu.edu/~rtc12/CSE486/lecture15.pdf
+- [Kris Kitani's slides for 16-385](http://www.cs.cmu.edu/~16385/s17/Slides/10.3_2D_Alignment__RANSAC.pdf)
+- [RANSAC for Dummies by Marco Zuliani](http://www.cs.tau.ac.il/~turkel/imagepapers/RANSAC4Dummies.pdf)
+- [Robert Collins' slides for CSE486](http://www.cse.psu.edu/~rtc12/CSE486/lecture15.pdf)
