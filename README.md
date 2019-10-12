@@ -6,7 +6,7 @@ RANSAC is an iterative method for estimating the parameters of a mathematical mo
 
 # Todos
 
-- [ ] create a modular RANSAC function
+- [x] create a modular RANSAC function
 
 ## 2D Regression
 
