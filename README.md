@@ -4,9 +4,24 @@ Learning about the different uses of [RANSAC](https://en.wikipedia.org/wiki/Rand
 
 RANSAC is an iterative method for estimating the parameters of a mathematical model from a set of observed data that contains outliers, when the outliers need to be ignored. It is non-deterministic; the more you let it run, the more reasonable the result.
 
-# Todos
+## API
 
-- [x] create a modular RANSAC function
+```python
+from ransac import RansacEstimator
+
+# estimate with RANSAC
+ransac = RansacEstimator(
+    min_samples=3,
+    residual_threshold=0.001,
+    max_trials=1000,
+)
+ret = ransac.fit(Procrustes(), [src_pc, dst_pc])
+
+# extract best values
+transform4x4_ransac = ret["best_params"]
+mse_ransac = ret["best_residual"]
+inliers_ransac = ret["best_inliers"]
+```
 
 ## 2D Regression
 
@@ -36,3 +51,4 @@ In the figure above, the red points correspond to corrupted correspondences. On 
 - [Kris Kitani's slides for 16-385](http://www.cs.cmu.edu/~16385/s17/Slides/10.3_2D_Alignment__RANSAC.pdf)
 - [RANSAC for Dummies by Marco Zuliani](http://www.cs.tau.ac.il/~turkel/imagepapers/RANSAC4Dummies.pdf)
 - [Robert Collins' slides for CSE486](http://www.cse.psu.edu/~rtc12/CSE486/lecture15.pdf)
+- [`skimage` implementation](https://github.com/scikit-image/scikit-image/blob/master/skimage/measure/fit.py)

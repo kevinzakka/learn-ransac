@@ -1,4 +1,6 @@
 """A simple RANSAC class implementation.
+
+Reference: https://github.com/scikit-image/scikit-image/blob/master/skimage/measure/fit.py
 """
 
 import numpy as np

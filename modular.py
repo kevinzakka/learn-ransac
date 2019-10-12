@@ -62,14 +62,14 @@ class Procrustes:
 
     # determine optimal translation
     trans = Y_c - rot @ X_c
-    
+
     if self._transform is None:
       self._transform = np.eye(4)
     self._transform[:3, :3] = rot
     self._transform[:3, 3] = trans
 
   def residuals(self, X, Y):
-    Y_est = self(X) 
+    Y_est = self(X)
     return np.linalg.norm(Y_est - Y, axis=1)
 
   @property
