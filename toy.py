@@ -8,7 +8,7 @@ import numpy as np
 if __name__ == "__main__":
     np.random.seed(0)
     num_points = 100
-    
+
     # create linear function
     x = np.linspace(0, 30, num=num_points)
     noise = 0.7 * np.random.randn(len(x))
@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     s = 2  # the smallest number of points required to estimate model params
     e = 0.25  # probability that a point is an outlier
-    N = 100 # the number of iterations 
+    N = 100 # the number of iterations
     d = 1  # the threshold used to identify a point that fits well
     T = 5  # the number of nearby points required to assert model fits well
 
@@ -58,7 +58,7 @@ if __name__ == "__main__":
         num_outliers = len(other_idxs) - num_inliers
 
         scores[ii] = [num_inliers, inliers, pt_idxs]
-    
+
     best_model = sorted(scores.items(), key=lambda x: x[1][0])[-1][1]
     best_inliers = best_model[1]
     sample_idxs = best_model[2]
