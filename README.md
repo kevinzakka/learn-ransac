@@ -2,7 +2,7 @@
 
 Learning about the different uses of [RANSAC](https://en.wikipedia.org/wiki/Random_sample_consensus): Ransom Sample Consensus.
 
-RANSAC is an iterative method for estimating the parameters of a mathematical model from a set of observed data that contains outliers, when the outliers need to be ignored. It is non-deterministic; the more you let it run, the more reasonable the result.
+RANSAC is an interative method for estimating the parameters of a model from data that contains outliers.
 
 ## API
 
@@ -28,7 +28,7 @@ inliers_ransac = ret["best_inliers"]
 As a toy example, we'll be corrupting a linear function of `x` with random outliers. Then we'll plot the predicted line from RANSAC and linear regression.
 
 <p align="center">
-<img src="./plots/toy.png" alt="Drawing">
+<img src="./plots/toy.png" width="75%" alt="Drawing">
 </p>
 
 ## Rigid Transform Estimation
