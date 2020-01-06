@@ -46,6 +46,17 @@ But what happens if we have some outliers? This can happen for instance when cal
 
 In the figure above, the red points correspond to corrupted correspondences. On the left, we have the rigid transform computed the regular way, without considering outliers. The blue and orange points are supposed to be superimposed. Notice how the outliers have affected the transformation and there is a slight offset between all points. On the right is the result of RANSAC + Procrustes. The blue points now completely superimpose the orange ones (not visible anymore) and are not affected by the red outliers.
 
+## Normal Estimation
+
+Suppose we are given a 3D point cloud and we would like to compute a normal vector associated with every 3D point in the cloud. That is, we want to estimate the normal of a plane tangent to each point in the cloud. This problem is thus equivalent to fitting a plane using least squares. It turns out that the normal vector that minimizes the sum of squared distances between each point and the best-fitting plane is the left singular vector associated with the smallest singular value (SVD to the rescue).
+
+<p align="center">
+<img src="./plots/pc_raw.png" width=48% alt="Drawing">
+<img src="./plots/pc_normal.png" width=48% alt="Drawing">
+</p>
+
+We can combine normal estimation with RANSAC to reduce the effect of outlier points. This is especially useful when the point cloud is very noisy or wavy.
+
 ## References
 
 - [Kris Kitani's slides for 16-385](http://www.cs.cmu.edu/~16385/s17/Slides/10.3_2D_Alignment__RANSAC.pdf)

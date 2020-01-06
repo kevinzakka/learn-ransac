@@ -55,7 +55,10 @@ class RansacEstimator:
         best_inliers = inliers
 
     # refit model using all inliers for this set
-    data_inliers = [d[best_inliers] for d in data]
+    if best_num_inliers == 0:
+      data_inliers = data
+    else:
+      data_inliers = [d[best_inliers] for d in data]
     model.estimate(*data_inliers)
     residuals = model.residuals(*data_inliers)
     residuals_mse = (residuals**2).mean()
