@@ -51,16 +51,20 @@ class NormalEstimator:
     # subtract out centroid
     X -= np.mean(X, axis=0)
 
-    # normal vector is the left singular
-    # vector associated with the smallest
-    # singular value
-    u, s, v = np.linalg.svd(X.T)
-    norm_vec = u[:, -1]
+    # # normal vector is the left singular
+    # # vector associated with the smallest
+    # # singular value
+    # U, S, V = np.linalg.svd(X)
+    # norm_vec = V[-1]  # U[:, -1]
 
-    # this runs faster but I like SVD more :)
-    # S = X.T @ X
-    # eigvals, eigvecs = np.linalg.eig(S)
-    # norm_vec = eigvecs[:, np.argmin(eigvals)]
+    # equivalently, the normal vector
+    # is the eigenvector associated
+    # with the smallest eigenvalue
+    # of the eigendecomposition
+    # of the covariance matrix (X @ X.T)
+    S = X.T @ X
+    eigvals, eigvecs = np.linalg.eigh(S)
+    norm_vec = eigvecs[:, np.argmin(eigvals)]
 
     # orient with respect to up gravity vector
     if self.up_vec is not None:
@@ -72,21 +76,22 @@ class NormalEstimator:
     self._normal_vec = norm_vec
 
   def residuals(self, X):
-    """Sum of the distances to best-fitting plane.
+    """L2 distances to best-fitting plane.
     """
     plane = self.fit_plane(X)
     plane_norm = np.linalg.norm(plane)
     d = plane[-1]
     plane = plane[:3]
     distances = (X * plane).sum(axis=1) - d
-    return distances / plane_norm
+    distances /= plane_norm
+    return distances**2
 
   @property
   def params(self):
     return self._normal_vec
 
 
-def compute_no_ransac(pts, tree):
+def compute_no_ransac(pts, tree, neighbors):
   up_vec = np.array([0, 0, 1.])
   estimator = NormalEstimator(up_vec)
   all_dists, all_idxs = tree.query(pts, k=30, distance_upper_bound=0.1)
@@ -101,7 +106,7 @@ def compute_no_ransac(pts, tree):
   return normals
 
 
-def compute_with_ransac(pts, tree, residual_threshold=0.002, max_trials=30):
+def compute_with_ransac(pts, tree, neighbors, max_trials, residual_threshold):
   up_vec = np.array([0, 0, 1.])
   estimator = NormalEstimator(up_vec)
   ransac = RansacEstimator(4, residual_threshold, max_trials)
@@ -119,7 +124,7 @@ def compute_with_ransac(pts, tree, residual_threshold=0.002, max_trials=30):
 
 def viz_normals(pts, clrs, normals):
   pts = pts.copy().astype(np.float64)
-  clrs = pts.copy().astype(np.float64)
+  clrs = clrs.copy().astype(np.float64)
   normals = normals.copy().astype(np.float64)
   o3d_pc = [o3d.geometry.PointCloud()]
   o3d_pc[0].points = o3d.utility.Vector3dVector(pts)
@@ -138,8 +143,8 @@ if __name__ == "__main__":
 
   pc = PointCloud(color_im, depth_im, cam_intr)
   pc.make_pointcloud(cam_pose, depth_trunc=1.0, trim=True)
-  pc.downsample(voxel_size=0.009, inplace=True)
-  pc.view_point_cloud()
+  pc.downsample(voxel_size=0.02, inplace=True)
+  # pc.view_point_cloud()
 
   point_cloud = pc.point_cloud
   pts = point_cloud[:, :3]
@@ -149,9 +154,9 @@ if __name__ == "__main__":
   tree = KDTree(pts)
 
   print("Estimating without RANSAC")
-  normals_no_ransac = compute_no_ransac(pts, tree)
+  normals_no_ransac = compute_no_ransac(pts, tree, 30)
   viz_normals(pts, clrs, normals_no_ransac)
 
   print("Estimating with RANSAC")
-  normals_with_ransac = compute_with_ransac(pts, tree)
+  normals_with_ransac = compute_with_ransac(pts, tree, 30, 10)
   viz_normals(pts, clrs, normals_with_ransac)

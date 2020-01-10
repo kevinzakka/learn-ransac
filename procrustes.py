@@ -1,18 +1,28 @@
-"""Robust orthogonal procrustes problem.
+"""Estimate a rigid transform between 2 point clouds.
 """
 
 import numpy as np
 import open3d as o3d
 
+from ransac import RansacEstimator
 from walle.core import RotationMatrix
 
 
-def transform_xyz(xyz, transform):
-  """Applies a rigid transform to an (N, 3) point cloud.
-  """
-  xyz_h = np.hstack([xyz, np.ones((len(xyz), 1))])  # homogenize 3D pointcloud
-  xyz_t_h = (transform @ xyz_h.T).T  # apply transform
-  return xyz_t_h[:, :3]
+def gen_data(N=100, frac=0.1):
+  # create a random rigid transform
+  transform = np.eye(4)
+  transform[:3, :3] = RotationMatrix.random()
+  transform[:3, 3] = 2 * np.random.randn(3) + 1
+
+  # create a random source point cloud
+  src_pc = 5 * np.random.randn(N, 3) + 2
+  dst_pc = Procrustes.transform_xyz(src_pc, transform)
+
+  # corrupt
+  rand_corrupt = np.random.choice(np.arange(len(src_pc)), replace=False, size=int(frac*N))
+  dst_pc[rand_corrupt] += np.random.uniform(-10, 10, (int(frac*N), 3))
+
+  return src_pc, dst_pc, transform, rand_corrupt
 
 
 def transform_from_rotm_tr(rotm, tr):
@@ -20,28 +30,6 @@ def transform_from_rotm_tr(rotm, tr):
   transform[:3, :3] = rotm
   transform[:3, 3] = tr
   return transform
-
-
-def estimate_rigid_transform_rotm(X, Y):
-  """Determines the rotation and translation that best aligns X to Y.
-  """
-  # find centroids
-  X_c = np.mean(X, axis=0)
-  Y_c = np.mean(Y, axis=0)
-  # shift
-  X_s = X - X_c
-  Y_s = Y - Y_c
-  # compute SVD of covariance matrix
-  cov = Y_s.T @ X_s
-  u, _, vt = np.linalg.svd(cov)
-  # determine rotation
-  rot = u @ vt
-  if np.linalg.det(rot) < 0.:
-    vt[2, :] *= -1
-    rot = u @ vt
-  # determine optimal translation
-  trans = Y_c - rot @ X_c
-  return transform_from_rotm_tr(rot, trans)
 
 
 def view_pc(xyzrgbs):
@@ -64,64 +52,91 @@ def view_pc(xyzrgbs):
   o3d.visualization.draw_geometries(pcs)
 
 
+class Procrustes:
+  """Determines the best rigid transform [1] between two point clouds.
+
+  References:
+    [1]: https://en.wikipedia.org/wiki/Orthogonal_Procrustes_problem
+  """
+  def __init__(self, transform=None):
+    self._transform = transform
+
+  def __call__(self, xyz):
+    return Procrustes.transform_xyz(xyz, self._transform)
+
+  @staticmethod
+  def transform_xyz(xyz, transform):
+    """Applies a rigid transform to an (N, 3) point cloud.
+    """
+    xyz_h = np.hstack([xyz, np.ones((len(xyz), 1))])  # homogenize 3D pointcloud
+    xyz_t_h = (transform @ xyz_h.T).T  # apply transform
+    return xyz_t_h[:, :3]
+
+  def estimate(self, X, Y):
+    # find centroids
+    X_c = np.mean(X, axis=0)
+    Y_c = np.mean(Y, axis=0)
+
+    # shift
+    X_s = X - X_c
+    Y_s = Y - Y_c
+
+    # compute SVD of covariance matrix
+    cov = Y_s.T @ X_s
+    u, _, vt = np.linalg.svd(cov)
+
+    # determine rotation
+    rot = u @ vt
+    if np.linalg.det(rot) < 0.:
+      vt[2, :] *= -1
+      rot = u @ vt
+
+    # determine optimal translation
+    trans = Y_c - rot @ X_c
+
+    self._transform = transform_from_rotm_tr(rot, trans)
+
+  def residuals(self, X, Y):
+    """L2 distance between point correspondences.
+    """
+    Y_est = self(X)
+    sum_sq = np.sum((Y_est - Y)**2, axis=1)
+    return sum_sq
+
+  @property
+  def params(self):
+    return self._transform
+
+
 if __name__ == "__main__":
-  # create a random rigid transform
-  transform = np.eye(4)
-  transform[:3, :3] = RotationMatrix.random()
-  transform[:3, 3] = 2 * np.random.randn(3) + 1
+  src_pc, dst_pc, transform_true, rand_corrupt = gen_data(frac=0.2)
 
-  # create a random source point cloud
-  src_pc = 5 * np.random.randn(100, 3) + 2
-  dst_pc = transform_xyz(src_pc, transform)
+  # estimate without ransac, i.e. using all
+  # point correspondences
+  naive_model = Procrustes()
+  naive_model.estimate(src_pc, dst_pc)
+  transform_naive = naive_model.params
+  mse_naive = np.sqrt(naive_model.residuals(src_pc, dst_pc).mean())
+  print("mse naive: {}".format(mse_naive))
 
-  # corrupt 10%
-  rand_corrupt = np.random.choice(np.arange(len(src_pc)), replace=False, size=10)
-  dst_pc[rand_corrupt] += np.random.uniform(-10, 10, (10, 3))
+  # estimate with RANSAC
+  ransac = RansacEstimator(
+    min_samples=3,
+    residual_threshold=(0.001)**2,
+    max_trials=100,
+  )
+  ret = ransac.fit(Procrustes(), [src_pc, dst_pc])
+  transform_ransac = ret["best_params"]
+  inliers_ransac = ret["best_inliers"]
+  mse_ransac = np.sqrt(Procrustes(transform_ransac).residuals(src_pc, dst_pc).mean())
+  print("mse ransac all: {}".format(mse_ransac))
+  mse_ransac_inliers = np.sqrt(
+    Procrustes(transform_ransac).residuals(src_pc[inliers_ransac], dst_pc[inliers_ransac]).mean())
+  print("mse ransac inliers: {}".format(mse_ransac_inliers))
 
-  # estimate the naive way
-  transform_naive = estimate_rigid_transform_rotm(src_pc, dst_pc)
-
-  # ================== #
-  # RANSAC params
-  # ================== #
-  s = 3
-  N = 100
-  d = 0.001
-  # ================== #
-
-  scores = {}
-  for ii in range(N):
-    # randomly select `s` pairs of points
-    rand_idxs = np.random.choice(np.arange(len(src_pc)), replace=False, size=s)
-    src_pts = src_pc[rand_idxs]
-    dst_pts = dst_pc[rand_idxs]
-
-    # estimate rigid transform from pair
-    transform_est = estimate_rigid_transform_rotm(src_pts, dst_pts)
-
-    # apply estimated transform on source points
-    dst_pts_est = transform_xyz(src_pc, transform_est)
-
-    # compare with ground truth and count inliers
-    distances = np.linalg.norm(dst_pts_est - dst_pc, axis=1)
-    inliers = distances <= d
-    num_inliers = np.sum(inliers) - s
-
-    # store score
-    scores[ii] = [num_inliers, inliers, rand_idxs]
-
-  best_model = sorted(scores.items(), key=lambda x: x[1][0])[-1][1]
-  best_inliers = best_model[1]
-  sample_idxs = best_model[2]
-
-  # refit model using all inliers for this set
-  src_pc_trimmed = src_pc[best_inliers]
-  dst_pc_trimmed = dst_pc[best_inliers]
+  # plot
+  src_pc_trimmed = src_pc[inliers_ransac]
+  dst_pc_trimmed = dst_pc[inliers_ransac]
   outlier_pc = dst_pc[rand_corrupt]
-  transform_ransac = estimate_rigid_transform_rotm(src_pc_trimmed, dst_pc_trimmed)
-
-  print("naive: {}".format(np.linalg.norm(transform_naive - transform)))
-  print("ransac: {}".format(np.linalg.norm(transform_ransac - transform)))
-
-  view_pc([dst_pc_trimmed, transform_xyz(src_pc, transform_naive), outlier_pc])
-  view_pc([dst_pc_trimmed, transform_xyz(src_pc, transform_ransac), outlier_pc])
+  view_pc([dst_pc_trimmed, Procrustes.transform_xyz(src_pc, transform_naive), outlier_pc])
+  view_pc([dst_pc_trimmed, Procrustes.transform_xyz(src_pc, transform_ransac), outlier_pc])
